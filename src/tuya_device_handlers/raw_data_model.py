@@ -58,3 +58,32 @@ class ElectricityData:
             return cls(current=current, power=power, voltage=voltage)
 
         return None
+
+
+class FeederScheduleData:
+    """Feeder schedule RAW value."""
+
+    _ENTRY_LEN = 5
+
+    @classmethod
+    def from_bytes(
+        cls, raw: bytes
+    ) -> list[tuple[int, int, int, int, int]] | None:
+        """Parse bytes into a list of (days, hour, minute, portion, enabled)."""
+        # Format: concatenated 5-byte entries.
+        # - days: 1B bitmask (bit 0 Monday … bit 6 Sunday; bit 7 ignored)
+        # - hour: 1B (0-23)
+        # - minute: 1B (0-59)
+        # - portion: 1B
+        # - enabled: 1B (0 or 1)
+        if len(raw) % cls._ENTRY_LEN != 0:
+            return None
+        return [
+            (raw[i], raw[i + 1], raw[i + 2], raw[i + 3], raw[i + 4])
+            for i in range(0, len(raw), cls._ENTRY_LEN)
+        ]
+
+    @classmethod
+    def to_bytes(cls, entries: list[tuple[int, int, int, int, int]]) -> bytes:
+        """Serialize a list of (days, hour, minute, portion, enabled) tuples."""
+        return bytes(b for entry in entries for b in entry)

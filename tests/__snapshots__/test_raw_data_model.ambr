@@ -100,3 +100,39 @@
 # name: test_electricity_data[]
   None
 # ---
+# name: test_feeder_schedule_data[AQceAg==]
+  None
+# ---
+# name: test_feeder_schedule_data[AQceAgE=]
+  list([
+    tuple(
+      1,
+      7,
+      30,
+      2,
+      1,
+    ),
+  ])
+# ---
+# name: test_feeder_schedule_data[BQgAAQFgEg8DAA==]
+  list([
+    tuple(
+      5,
+      8,
+      0,
+      1,
+      1,
+    ),
+    tuple(
+      96,
+      18,
+      15,
+      3,
+      0,
+    ),
+  ])
+# ---
+# name: test_feeder_schedule_data[]
+  list([
+  ])
+# ---
