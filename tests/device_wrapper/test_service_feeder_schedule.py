@@ -103,6 +103,11 @@ _SAMPLE_MEAL_PLAN = [
             "cwwsq_wfkzyy0evslzsmoi.json",
             None,
         ),
+        # Invalid: byte length not a multiple of 5
+        (
+            "cwwsq_wfkzyy0evslzsmoi.json",
+            "AQceAg==",
+        ),
     ],
 )
 def test_read_device_status(
