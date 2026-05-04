@@ -27,35 +27,6 @@ class FeederSchedule(TypedDict):
     """True or False."""
 
 
-class _DefaultFeederScheduleWrapper(DPCodeRawWrapper[list[FeederSchedule]]):
-    """Wrapper for a schedule received in a base64 DPCode."""
-
-    def read_device_status(
-        self, device: CustomerDevice
-    ) -> list[FeederSchedule] | None:
-        """Decode the meal plan data."""
-        if (data := self._read_dpcode_value(device)) is None:
-            return None
-        return _RawFeederScheduleConverter.from_bytes(data)
-
-    def _convert_value_to_raw_value(
-        self, device: CustomerDevice, value: list[FeederSchedule]
-    ) -> Any:
-        """Convert display value back to a raw device value."""
-        payload = _RawFeederScheduleConverter.to_bytes(value)
-        return base64.b64encode(payload).decode("utf-8")
-
-
-def get_feeder_schedule_wrapper(
-    device: CustomerDevice,
-) -> DeviceWrapper[list[FeederSchedule]] | None:
-    if device.product_id == "wfkzyy0evslzsmoi":
-        return _DefaultFeederScheduleWrapper.find_dpcode(
-            device, "meal_plan", prefer_function=True
-        )
-    return None
-
-
 _DAYS_OF_WEEK: list[str] = [
     "monday",
     "tuesday",
@@ -67,8 +38,23 @@ _DAYS_OF_WEEK: list[str] = [
 ]
 
 
-class _RawFeederScheduleConverter:
-    """Convert between raw feeder schedule data and HA FeederSchedule dicts."""
+class _DefaultFeederScheduleWrapper(DPCodeRawWrapper[list[FeederSchedule]]):
+    """Wrapper for a schedule received in a base64 DPCode."""
+
+    def read_device_status(
+        self, device: CustomerDevice
+    ) -> list[FeederSchedule] | None:
+        """Decode the meal plan data."""
+        if (data := self._read_dpcode_value(device)) is None:
+            return None
+        return self.from_bytes(data)
+
+    def _convert_value_to_raw_value(
+        self, device: CustomerDevice, value: list[FeederSchedule]
+    ) -> Any:
+        """Convert display value back to a raw device value."""
+        payload = self.to_bytes(value)
+        return base64.b64encode(payload).decode("utf-8")
 
     @staticmethod
     def _decode_entry(
@@ -120,3 +106,13 @@ class _RawFeederScheduleConverter:
         return _RawFeederScheduleData.to_bytes(
             [cls._encode_entry(item) for item in items]
         )
+
+
+def get_feeder_schedule_wrapper(
+    device: CustomerDevice,
+) -> DeviceWrapper[list[FeederSchedule]] | None:
+    if device.product_id == "wfkzyy0evslzsmoi":
+        return _DefaultFeederScheduleWrapper.find_dpcode(
+            device, "meal_plan", prefer_function=True
+        )
+    return None
