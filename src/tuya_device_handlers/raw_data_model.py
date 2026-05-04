@@ -60,7 +60,7 @@ class ElectricityData:
         return None
 
 
-class FeederScheduleEntry(NamedTuple):
+class FeederScheduleDataEntry(NamedTuple):
     """One feeder schedule entry."""
 
     days: int
@@ -80,19 +80,19 @@ class FeederScheduleData:
     _ENTRY_LEN = 5
 
     @classmethod
-    def from_bytes(cls, raw: bytes) -> list[FeederScheduleEntry] | None:
-        """Parse bytes into a list of FeederScheduleEntry."""
-        # Format: concatenated 5-byte entries (see FeederScheduleEntry).
+    def from_bytes(cls, raw: bytes) -> list[FeederScheduleDataEntry] | None:
+        """Parse bytes into a list of FeederScheduleDataEntry."""
+        # Format: concatenated 5-byte entries (see FeederScheduleDataEntry).
         if len(raw) % cls._ENTRY_LEN != 0:
             return None
         return [
-            FeederScheduleEntry(
+            FeederScheduleDataEntry(
                 raw[i], raw[i + 1], raw[i + 2], raw[i + 3], raw[i + 4]
             )
             for i in range(0, len(raw), cls._ENTRY_LEN)
         ]
 
     @classmethod
-    def to_bytes(cls, entries: list[FeederScheduleEntry]) -> bytes:
-        """Serialize a list of FeederScheduleEntry."""
+    def to_bytes(cls, entries: list[FeederScheduleDataEntry]) -> bytes:
+        """Serialize a list of FeederScheduleDataEntry."""
         return bytes(b for entry in entries for b in entry)

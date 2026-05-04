@@ -105,7 +105,7 @@
 # ---
 # name: test_feeder_schedule_data[AQceAgE=]
   list([
-    FeederScheduleEntry(
+    FeederScheduleDataEntry(
       days=1,
       enabled=1,
       hour=7,
@@ -116,14 +116,14 @@
 # ---
 # name: test_feeder_schedule_data[BQgAAQFgEg8DAA==]
   list([
-    FeederScheduleEntry(
+    FeederScheduleDataEntry(
       days=5,
       enabled=1,
       hour=8,
       minute=0,
       portion=1,
     ),
-    FeederScheduleEntry(
+    FeederScheduleDataEntry(
       days=96,
       enabled=0,
       hour=18,
