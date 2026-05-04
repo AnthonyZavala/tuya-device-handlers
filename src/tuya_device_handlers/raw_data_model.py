@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 import struct
-from typing import Self
+from typing import NamedTuple, Self
 
 
 @dataclass(kw_only=True)
@@ -60,30 +60,39 @@ class ElectricityData:
         return None
 
 
+class FeederScheduleEntry(NamedTuple):
+    """One feeder schedule entry."""
+
+    days: int
+    """Bitmask: bit 0 Monday … bit 6 Sunday; bit 7 ignored."""
+    hour: int
+    """0-23."""
+    minute: int
+    """0-59."""
+    portion: int
+    enabled: int
+    """0 or 1."""
+
+
 class FeederScheduleData:
     """Feeder schedule RAW value."""
 
     _ENTRY_LEN = 5
 
     @classmethod
-    def from_bytes(
-        cls, raw: bytes
-    ) -> list[tuple[int, int, int, int, int]] | None:
-        """Parse bytes into a list of (days, hour, minute, portion, enabled)."""
-        # Format: concatenated 5-byte entries.
-        # - days: 1B bitmask (bit 0 Monday … bit 6 Sunday; bit 7 ignored)
-        # - hour: 1B (0-23)
-        # - minute: 1B (0-59)
-        # - portion: 1B
-        # - enabled: 1B (0 or 1)
+    def from_bytes(cls, raw: bytes) -> list[FeederScheduleEntry] | None:
+        """Parse bytes into a list of FeederScheduleEntry."""
+        # Format: concatenated 5-byte entries (see FeederScheduleEntry).
         if len(raw) % cls._ENTRY_LEN != 0:
             return None
         return [
-            (raw[i], raw[i + 1], raw[i + 2], raw[i + 3], raw[i + 4])
+            FeederScheduleEntry(
+                raw[i], raw[i + 1], raw[i + 2], raw[i + 3], raw[i + 4]
+            )
             for i in range(0, len(raw), cls._ENTRY_LEN)
         ]
 
     @classmethod
-    def to_bytes(cls, entries: list[tuple[int, int, int, int, int]]) -> bytes:
-        """Serialize a list of (days, hour, minute, portion, enabled) tuples."""
+    def to_bytes(cls, entries: list[FeederScheduleEntry]) -> bytes:
+        """Serialize a list of FeederScheduleEntry."""
         return bytes(b for entry in entries for b in entry)

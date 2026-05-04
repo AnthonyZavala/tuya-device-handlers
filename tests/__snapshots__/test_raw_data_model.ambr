@@ -105,30 +105,30 @@
 # ---
 # name: test_feeder_schedule_data[AQceAgE=]
   list([
-    tuple(
-      1,
-      7,
-      30,
-      2,
-      1,
+    FeederScheduleEntry(
+      days=1,
+      enabled=1,
+      hour=7,
+      minute=30,
+      portion=2,
     ),
   ])
 # ---
 # name: test_feeder_schedule_data[BQgAAQFgEg8DAA==]
   list([
-    tuple(
-      5,
-      8,
-      0,
-      1,
-      1,
+    FeederScheduleEntry(
+      days=5,
+      enabled=1,
+      hour=8,
+      minute=0,
+      portion=1,
     ),
-    tuple(
-      96,
-      18,
-      15,
-      3,
-      0,
+    FeederScheduleEntry(
+      days=96,
+      enabled=0,
+      hour=18,
+      minute=15,
+      portion=3,
     ),
   ])
 # ---
