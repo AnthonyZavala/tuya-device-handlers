@@ -5,6 +5,7 @@ from syrupy.assertion import SnapshotAssertion
 
 from tuya_device_handlers.device_wrapper.service_feeder_schedule import (
     FeederSchedule,
+    _DefaultFeederScheduleWrapper,
     get_feeder_schedule_wrapper,
 )
 
@@ -117,17 +118,11 @@ def test_read_device_status(
     device = create_device(fixture_filename)
     device.status["meal_plan"] = data
 
-    wrapper = get_feeder_schedule_wrapper(device)
+    wrapper = _DefaultFeederScheduleWrapper.find_dpcode(
+        device, "meal_plan", prefer_function=True
+    )
     assert wrapper is not None
     assert wrapper.read_device_status(device) == snapshot
-
-
-def test_no_wrapper() -> None:
-    """Test wrapper returns None for unsupported devices."""
-    device = create_device("cl_zah67ekd.json")
-
-    wrapper = get_feeder_schedule_wrapper(device)
-    assert wrapper is None
 
 
 @pytest.mark.parametrize(
@@ -146,8 +141,30 @@ def test_get_update_commands(
     """Test get_update_commands encodes data correctly."""
     device = create_device(fixture_filename)
 
-    wrapper = get_feeder_schedule_wrapper(device)
+    wrapper = _DefaultFeederScheduleWrapper.find_dpcode(
+        device, "meal_plan", prefer_function=True
+    )
     assert wrapper is not None
 
     commands = wrapper.get_update_commands(device, _SAMPLE_MEAL_PLAN)
     assert commands == [{"code": dpcode, "value": expected_value}]
+
+
+@pytest.mark.parametrize(
+    ("fixture_filename", "wrapper_type"),
+    [
+        ("cwwsq_wfkzyy0evslzsmoi.json", _DefaultFeederScheduleWrapper),
+        ("cl_zah67ekd.json", None),
+    ],
+)
+def test_get_feeder_schedule_wrapper(
+    fixture_filename: str, wrapper_type: type | None
+) -> None:
+    """Test get_feeder_schedule_wrapper returns the correct wrapper."""
+    device = create_device(fixture_filename)
+
+    wrapper = get_feeder_schedule_wrapper(device)
+    if wrapper_type is None:
+        assert wrapper is None
+    else:
+        assert isinstance(wrapper, wrapper_type)
