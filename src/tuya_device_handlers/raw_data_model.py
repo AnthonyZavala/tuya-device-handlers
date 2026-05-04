@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 import struct
-from typing import Self
+from typing import NamedTuple, Self
 
 
 @dataclass(kw_only=True)
@@ -58,3 +58,41 @@ class ElectricityData:
             return cls(current=current, power=power, voltage=voltage)
 
         return None
+
+
+class FeederScheduleDataEntry(NamedTuple):
+    """One feeder schedule entry."""
+
+    days: int
+    """Bitmask: bit 0 Monday … bit 6 Sunday; bit 7 ignored."""
+    hour: int
+    """0-23."""
+    minute: int
+    """0-59."""
+    portion: int
+    enabled: int
+    """0 or 1."""
+
+
+class FeederScheduleData:
+    """Feeder schedule RAW value."""
+
+    _ENTRY_LEN = 5
+
+    @classmethod
+    def from_bytes(cls, raw: bytes) -> list[FeederScheduleDataEntry] | None:
+        """Parse bytes into a list of RawFeederScheduleDataEntry."""
+        # Format: concatenated 5-byte entries (see RawFeederScheduleDataEntry).
+        if len(raw) % cls._ENTRY_LEN != 0:
+            return None
+        return [
+            FeederScheduleDataEntry(
+                raw[i], raw[i + 1], raw[i + 2], raw[i + 3], raw[i + 4]
+            )
+            for i in range(0, len(raw), cls._ENTRY_LEN)
+        ]
+
+    @classmethod
+    def to_bytes(cls, entries: list[FeederScheduleDataEntry]) -> bytes:
+        """Serialize a list of RawFeederScheduleDataEntry."""
+        return bytes(b for entry in entries for b in entry)

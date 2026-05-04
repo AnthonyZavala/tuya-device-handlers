@@ -1,10 +1,14 @@
 """Device quirks for Tuya devices."""
 
 import base64
-from enum import IntFlag
-from typing import Any, NamedTuple, TypedDict
+from typing import Any, TypedDict
 
 from tuya_sharing import CustomerDevice
+
+from tuya_device_handlers.raw_data_model import (
+    FeederScheduleData as _RawFeederScheduleData,
+    FeederScheduleDataEntry as _RawFeederScheduleDataEntry,
+)
 
 from .base import DeviceWrapper
 from .common import DPCodeRawWrapper
@@ -32,17 +36,13 @@ class _DefaultFeederScheduleWrapper(DPCodeRawWrapper[list[FeederSchedule]]):
         """Decode the meal plan data."""
         if (data := self._read_dpcode_value(device)) is None:
             return None
-        if (entries := _RawFeederScheduleData.from_bytes(data)) is None:
-            return None
-        return [_RawFeederScheduleData.decode_entry(entry) for entry in entries]
+        return _RawFeederScheduleConverter.from_bytes(data)
 
     def _convert_value_to_raw_value(
         self, device: CustomerDevice, value: list[FeederSchedule]
     ) -> Any:
         """Convert display value back to a raw device value."""
-        payload = _RawFeederScheduleData.to_bytes(
-            [_RawFeederScheduleData.encode_entry(item) for item in value]
-        )
+        payload = _RawFeederScheduleConverter.to_bytes(value)
         return base64.b64encode(payload).decode("utf-8")
 
 
@@ -56,68 +56,32 @@ def get_feeder_schedule_wrapper(
     return None
 
 
-class _DaysOfWeek(IntFlag):
-    """Bit 0 = Monday … bit 6 = Sunday; bit 7 unused."""
-
-    MONDAY = 1
-    TUESDAY = 2
-    WEDNESDAY = 4
-    THURSDAY = 8
-    FRIDAY = 16
-    SATURDAY = 32
-    SUNDAY = 64
-
-
-class _RawFeederScheduleDataEntry(NamedTuple):
-    """One feeder schedule entry."""
-
-    days: _DaysOfWeek
-    """Bitmask: bit 0 Monday … bit 6 Sunday; bit 7 ignored."""
-    hour: int
-    """0-23."""
-    minute: int
-    """0-59."""
-    portion: int
-    enabled: int
-    """0 or 1."""
+_DAYS_OF_WEEK: list[str] = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+]
 
 
-class _RawFeederScheduleData:
-    """Feeder schedule RAW value."""
-
-    _ENTRY_LEN = 5
-
-    @classmethod
-    def from_bytes(cls, raw: bytes) -> list[_RawFeederScheduleDataEntry] | None:
-        """Parse bytes into a list of _RawFeederScheduleDataEntry."""
-        # Format: concatenated 5-byte entries (see _RawFeederScheduleDataEntry).
-        if len(raw) % cls._ENTRY_LEN != 0:
-            return None
-        return [
-            _RawFeederScheduleDataEntry(
-                _DaysOfWeek(raw[i]),
-                raw[i + 1],
-                raw[i + 2],
-                raw[i + 3],
-                raw[i + 4],
-            )
-            for i in range(0, len(raw), cls._ENTRY_LEN)
-        ]
-
-    @classmethod
-    def to_bytes(cls, entries: list[_RawFeederScheduleDataEntry]) -> bytes:
-        """Serialize a list of _RawFeederScheduleDataEntry."""
-        return bytes(b for entry in entries for b in entry)
+class _RawFeederScheduleConverter:
+    """Convert between raw feeder schedule data and HA FeederSchedule dicts."""
 
     @staticmethod
-    def decode_entry(entry: _RawFeederScheduleDataEntry) -> FeederSchedule:
+    def _decode_entry(
+        entry: _RawFeederScheduleDataEntry,
+    ) -> FeederSchedule:
         """Convert a raw entry to a HA FeederSchedule dict."""
         bitmask = entry.days & 0x7F
         return FeederSchedule(
+            # Bit 0 = Monday … bit 6 = Sunday; bit 7 unused.
             days=[
-                name.lower()
-                for name, member in _DaysOfWeek.__members__.items()
-                if bitmask & member
+                name
+                for i, name in enumerate(_DAYS_OF_WEEK)
+                if bitmask & (1 << i)
             ],
             time=f"{entry.hour:02d}:{entry.minute:02d}",
             portion=entry.portion,
@@ -125,17 +89,34 @@ class _RawFeederScheduleData:
         )
 
     @staticmethod
-    def encode_entry(item: FeederSchedule) -> _RawFeederScheduleDataEntry:
+    def _encode_entry(
+        item: FeederSchedule,
+    ) -> _RawFeederScheduleDataEntry:
         """Convert a HA FeederSchedule dict to a raw entry."""
-        bitmask = _DaysOfWeek(0)
-        for name, member in _DaysOfWeek.__members__.items():
-            if name.lower() in item["days"]:
-                bitmask |= member
+        # Bit 0 = Monday … bit 6 = Sunday; bit 7 unused.
+        bitmask = 0
+        for i, name in enumerate(_DAYS_OF_WEEK):
+            if name in item["days"]:
+                bitmask |= 1 << i
         hour, minute = map(int, item["time"].split(":"))
         return _RawFeederScheduleDataEntry(
-            days=(bitmask),
+            days=bitmask,
             hour=hour,
             minute=minute,
             portion=item["portion"],
             enabled=int(item["enabled"]),
+        )
+
+    @classmethod
+    def from_bytes(cls, raw: bytes) -> list[FeederSchedule] | None:
+        """Parse raw bytes into a list of HA FeederSchedule dicts."""
+        if (entries := _RawFeederScheduleData.from_bytes(raw)) is None:
+            return None
+        return [cls._decode_entry(entry) for entry in entries]
+
+    @classmethod
+    def to_bytes(cls, items: list[FeederSchedule]) -> bytes:
+        """Serialize a list of HA FeederSchedule dicts to raw bytes."""
+        return _RawFeederScheduleData.to_bytes(
+            [cls._encode_entry(item) for item in items]
         )
