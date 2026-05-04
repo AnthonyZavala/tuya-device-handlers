@@ -47,14 +47,9 @@ class _DefaultFeederScheduleWrapper(DPCodeRawWrapper[list[FeederSchedule]]):
         """Decode the meal plan data."""
         if (data := self._read_dpcode_value(device)) is None:
             return None
-        return self.from_bytes(data)
-
-    def _convert_value_to_raw_value(
-        self, device: CustomerDevice, value: list[FeederSchedule]
-    ) -> Any:
-        """Convert display value back to a raw device value."""
-        payload = self.to_bytes(value)
-        return base64.b64encode(payload).decode("utf-8")
+        if (entries := _RawFeederScheduleData.from_bytes(data)) is None:
+            return None
+        return [self._decode_entry(entry) for entry in entries]
 
     @staticmethod
     def _decode_entry(
@@ -74,6 +69,15 @@ class _DefaultFeederScheduleWrapper(DPCodeRawWrapper[list[FeederSchedule]]):
             enabled=bool(entry.enabled),
         )
 
+    def _convert_value_to_raw_value(
+        self, device: CustomerDevice, value: list[FeederSchedule]
+    ) -> Any:
+        """Convert display value back to a raw device value."""
+        payload = _RawFeederScheduleData.to_bytes(
+            [self._encode_entry(item) for item in value]
+        )
+        return base64.b64encode(payload).decode("utf-8")
+
     @staticmethod
     def _encode_entry(
         item: FeederSchedule,
@@ -91,20 +95,6 @@ class _DefaultFeederScheduleWrapper(DPCodeRawWrapper[list[FeederSchedule]]):
             minute=minute,
             portion=item["portion"],
             enabled=int(item["enabled"]),
-        )
-
-    @classmethod
-    def from_bytes(cls, raw: bytes) -> list[FeederSchedule] | None:
-        """Parse raw bytes into a list of HA FeederSchedule dicts."""
-        if (entries := _RawFeederScheduleData.from_bytes(raw)) is None:
-            return None
-        return [cls._decode_entry(entry) for entry in entries]
-
-    @classmethod
-    def to_bytes(cls, items: list[FeederSchedule]) -> bytes:
-        """Serialize a list of HA FeederSchedule dicts to raw bytes."""
-        return _RawFeederScheduleData.to_bytes(
-            [cls._encode_entry(item) for item in items]
         )
 
 
