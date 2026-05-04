@@ -9,7 +9,6 @@ from tuya_device_handlers.builder.device_quirk import DeviceQuirk
 from tuya_device_handlers.device_wrapper.service_feeder_schedule import (
     DefaultFeederScheduleWrapper,
     FeederSchedule,
-    _DefaultFeederScheduleWrapper,
     get_feeder_schedule_wrapper,
 )
 
