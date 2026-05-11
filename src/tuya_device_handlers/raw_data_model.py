@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 import struct
-from typing import NamedTuple, Self
+from typing import Self
 
 
 @dataclass(kw_only=True)
@@ -60,7 +60,8 @@ class ElectricityData:
         return None
 
 
-class FeederScheduleDataEntry(NamedTuple):
+@dataclass(kw_only=True)
+class FeederScheduleDataEntry:
     """One feeder schedule entry."""
 
     days: int
@@ -72,6 +73,23 @@ class FeederScheduleDataEntry(NamedTuple):
     portion: int
     enabled: int
     """0 or 1."""
+
+    @classmethod
+    def from_bytes(cls, raw: bytes) -> Self:
+        """Parse 5 bytes into a FeederScheduleDataEntry."""
+        return cls(
+            days=raw[0],
+            hour=raw[1],
+            minute=raw[2],
+            portion=raw[3],
+            enabled=raw[4],
+        )
+
+    def to_bytes(self) -> bytes:
+        """Serialize this entry to 5 bytes."""
+        return bytes(
+            (self.days, self.hour, self.minute, self.portion, self.enabled)
+        )
 
 
 class FeederScheduleData:
@@ -86,13 +104,11 @@ class FeederScheduleData:
         if len(raw) % cls._ENTRY_LEN != 0:
             return None
         return [
-            FeederScheduleDataEntry(
-                raw[i], raw[i + 1], raw[i + 2], raw[i + 3], raw[i + 4]
-            )
+            FeederScheduleDataEntry.from_bytes(raw[i : i + cls._ENTRY_LEN])
             for i in range(0, len(raw), cls._ENTRY_LEN)
         ]
 
     @classmethod
     def to_bytes(cls, entries: list[FeederScheduleDataEntry]) -> bytes:
         """Serialize a list of RawFeederScheduleDataEntry."""
-        return bytes(b for entry in entries for b in entry)
+        return b"".join(entry.to_bytes() for entry in entries)
