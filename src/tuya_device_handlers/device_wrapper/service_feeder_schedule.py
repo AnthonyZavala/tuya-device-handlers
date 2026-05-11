@@ -15,7 +15,7 @@ from .common import DPCodeRawWrapper
 
 
 class FeederSchedule(TypedDict):
-    """Public class for Home Assistant representation of a feeder schedule entry."""
+    """HA representation of a feeder schedule entry."""
 
     days: list[str]
     """Days (monday-sunday)."""
@@ -101,7 +101,10 @@ class DefaultFeederScheduleWrapper(DPCodeRawWrapper[list[FeederSchedule]]):
 def get_feeder_schedule_wrapper(
     device: CustomerDevice,
 ) -> DeviceWrapper[list[FeederSchedule]] | None:
-    from tuya_device_handlers import TUYA_QUIRKS_REGISTRY  # noqa: PLC0415
+    """Get the feeder schedules wrapper for a device."""
+    from tuya_device_handlers import (  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+        TUYA_QUIRKS_REGISTRY,
+    )
 
     if (quirk := TUYA_QUIRKS_REGISTRY.get_quirk_for_device(device)) is not None:
         return quirk.get_feeder_schedules_wrapper(device)
