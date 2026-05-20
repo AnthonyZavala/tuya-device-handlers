@@ -67,7 +67,7 @@ class TypeInformation[T](abc.ABC):
         prefer_function: bool = False,
     ) -> Self | None:
         """Find type information for a matching DP code."""
-        return get_device_dpcode_type_information(
+        return get_type_information(
             device,
             dpcodes,
             prefer_function=prefer_function,
@@ -333,7 +333,7 @@ class StringTypeInformation(TypeInformation[str]):
         return cast(str, device.status.get(self.dpcode))
 
 
-def get_device_dpcode_type_information[T: TypeInformation](
+def get_type_information[T: TypeInformation](
     device: CustomerDevice,
     dpcodes: str | tuple[str, ...] | None,
     *,
