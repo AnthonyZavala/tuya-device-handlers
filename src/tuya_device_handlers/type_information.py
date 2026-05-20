@@ -401,6 +401,7 @@ def _get_device_dpcode_type_information[T: TypeInformation](
     )
     for definition in lookup:
         if definition is not None and (
+            # pylint: disable-next=protected-access
             type_information := type_information_cls._from_json(  # noqa: SLF001
                 dpcode=dpcode,
                 type_data=definition.values,
