@@ -73,31 +73,15 @@ class TypeInformation[T](abc.ABC):
         if not isinstance(dpcodes, tuple):
             dpcodes = (dpcodes,)
 
-        lookup_tuple = (
-            (device.function, device.status_range)
-            if prefer_function
-            else (device.status_range, device.function)
-        )
-
         for dpcode in dpcodes:
-            report_type = (
-                status_range.report_type
-                if (status_range := device.status_range.get(dpcode))
-                else None
-            )
-            for device_specs in lookup_tuple:
-                if (
-                    (current_definition := device_specs.get(dpcode))
-                    and DPType.try_parse(current_definition.type) is cls._DPTYPE
-                    and (
-                        type_information := cls._from_json(
-                            dpcode=dpcode,
-                            type_data=current_definition.values,
-                            report_type=report_type,
-                        )
-                    )
-                ):
-                    return type_information
+            if type_information := get_device_dpcode_type_information(
+                device=device,
+                dpcode=dpcode,
+                prefer_function=prefer_function,
+                dp_type=cls._DPTYPE,
+                type_information_cls=cls,
+            ):
+                return type_information
 
         return None
 
@@ -358,3 +342,49 @@ class StringTypeInformation(TypeInformation[str]):
     def read_device_value(self, device: CustomerDevice) -> str | None:
         """Read the device value for this datapoint."""
         return cast(str, device.status.get(self.dpcode))
+
+
+def get_device_dpcode_type_information[T: TypeInformation](
+    device: CustomerDevice,
+    dpcode: str,
+    *,
+    prefer_function: bool = False,
+    dp_type: DPType,
+    type_information_cls: type[T],
+) -> T | None:
+    """Find type information for a device DP code."""
+    function_definition = device.function.get(dpcode)
+    if (
+        function_definition
+        and DPType.try_parse(function_definition.type) is not dp_type
+    ):
+        function_definition = None
+
+    status_range_definition = device.status_range.get(dpcode)
+    if (
+        status_range_definition
+        and DPType.try_parse(status_range_definition.type) is not dp_type
+    ):
+        status_range_definition = None
+
+    lookup = (
+        (function_definition, status_range_definition)
+        if prefer_function
+        else (status_range_definition, function_definition)
+    )
+
+    report_type = (
+        status_range_definition.report_type if status_range_definition else None
+    )
+
+    for definition in lookup:
+        if definition is not None and (
+            type_information := type_information_cls._from_json(  # noqa: SLF001
+                dpcode=dpcode,
+                type_data=definition.values,
+                report_type=report_type,
+            )
+        ):
+            return type_information
+
+    return None
