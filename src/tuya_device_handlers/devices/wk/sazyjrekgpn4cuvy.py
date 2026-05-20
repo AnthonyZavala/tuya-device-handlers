@@ -21,7 +21,7 @@ class BatteryPercentage0To5TypeInformation(IntegerTypeInformation):
 
     def scale_value(self, value: int) -> float:
         """Scale a 0-5 raw value to the 0-100 percent range."""
-        return super().scale_value(value) * 20
+        return value * 20
 
 
 (
