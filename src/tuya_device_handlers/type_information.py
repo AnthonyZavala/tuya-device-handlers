@@ -71,7 +71,6 @@ class TypeInformation[T](abc.ABC):
             device,
             dpcodes,
             prefer_function=prefer_function,
-            dp_type=cls._DPTYPE,
             type_information_cls=cls,
         )
 
@@ -339,7 +338,6 @@ def get_device_dpcode_type_information[T: TypeInformation](
     dpcodes: str | tuple[str, ...] | None,
     *,
     prefer_function: bool = False,
-    dp_type: DPType,
     type_information_cls: type[T],
 ) -> T | None:
     """Find type information for a device DP code."""
@@ -354,7 +352,6 @@ def get_device_dpcode_type_information[T: TypeInformation](
             device=device,
             dpcode=dpcode,
             prefer_function=prefer_function,
-            dp_type=dp_type,
             type_information_cls=type_information_cls,
         ):
             return type_information
@@ -367,7 +364,6 @@ def _get_device_dpcode_type_information[T: TypeInformation](
     dpcode: str,
     *,
     prefer_function: bool = False,
-    dp_type: DPType,
     type_information_cls: type[T],
 ) -> T | None:
     """Find type information for a device DP code."""
@@ -376,6 +372,8 @@ def _get_device_dpcode_type_information[T: TypeInformation](
     status_range_definition = device.status_range.get(dpcode)
 
     # Validate definitions against expected DP type, ignore if not matching
+    # pylint: disable-next=protected-access
+    dp_type = type_information_cls._DPTYPE  # noqa: SLF001
     if (
         function_definition
         and DPType.try_parse(function_definition.type) is not dp_type
