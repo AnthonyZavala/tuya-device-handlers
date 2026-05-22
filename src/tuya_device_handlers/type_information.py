@@ -10,7 +10,9 @@ from typing import Any, ClassVar, Self, cast
 
 from tuya_sharing import CustomerDevice
 
+from . import TUYA_QUIRKS_REGISTRY
 from .const import DEVICE_WARNINGS, DPType
+from .registry import DeviceQuirkProtocol
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +48,7 @@ class TypeInformation[T](abc.ABC):
     dpcode: str
     type_data: str
     report_type: str | None
+    quirk: DeviceQuirkProtocol | None = None
 
     @classmethod
     def _from_json(
@@ -78,6 +81,7 @@ class TypeInformation[T](abc.ABC):
             if prefer_function
             else (device.status_range, device.function)
         )
+        quirk = TUYA_QUIRKS_REGISTRY.get_quirk_for_device(device)
 
         for dpcode in dpcodes:
             report_type = (
@@ -97,6 +101,7 @@ class TypeInformation[T](abc.ABC):
                         )
                     )
                 ):
+                    type_information.quirk = quirk
                     return type_information
 
         return None

@@ -5,6 +5,7 @@
     'label': list([
       'motor_fault',
     ]),
+    'quirk': None,
     'report_type': None,
     'type_data': '{"label": ["motor_fault"]}',
   })
@@ -12,6 +13,7 @@
 # name: test_valid_type_information[BooleanTypeInformation-demo_boolean]
   dict({
     'dpcode': 'demo_boolean',
+    'quirk': None,
     'report_type': None,
     'type_data': '{}',
   })
@@ -19,6 +21,7 @@
 # name: test_valid_type_information[EnumTypeInformation-demo_enum]
   dict({
     'dpcode': 'demo_enum',
+    'quirk': None,
     'range': list([
       'scene',
       'customize_scene',
@@ -33,6 +36,7 @@
     'dpcode': 'demo_integer',
     'max': 1000,
     'min': 0,
+    'quirk': None,
     'report_type': None,
     'scale': 1,
     'step': 1,
@@ -43,6 +47,7 @@
 # name: test_valid_type_information[JsonTypeInformation-demo_json]
   dict({
     'dpcode': 'demo_json',
+    'quirk': None,
     'report_type': None,
     'type_data': '{}',
   })
@@ -50,6 +55,7 @@
 # name: test_valid_type_information[RawTypeInformation-demo_raw]
   dict({
     'dpcode': 'demo_raw',
+    'quirk': None,
     'report_type': None,
     'type_data': '{}',
   })
@@ -57,6 +63,7 @@
 # name: test_valid_type_information[StringTypeInformation-demo_string]
   dict({
     'dpcode': 'demo_string',
+    'quirk': None,
     'report_type': None,
     'type_data': '{}',
   })
