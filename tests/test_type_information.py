@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from syrupy.assertion import SnapshotAssertion
+from syrupy.filters import props
 from tuya_sharing import CustomerDevice
 
 from tuya_device_handlers import TUYA_QUIRKS_REGISTRY
@@ -45,7 +46,9 @@ def test_valid_type_information(
     type_information = type_information_type.find_dpcode(mock_device, dpcode)
 
     assert type_information
-    assert dataclasses.asdict(type_information) == snapshot
+    assert dataclasses.asdict(type_information) == snapshot(
+        exclude=props("quirk")
+    )
 
 
 @pytest.mark.parametrize(
