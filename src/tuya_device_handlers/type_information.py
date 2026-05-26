@@ -140,7 +140,8 @@ class BitmapTypeInformation(TypeInformation[int]):
         report_type: str | None,
     ) -> Self | None:
         """Load JSON string and return a BitmapTypeInformation object."""
-        if not (parsed := cast(dict[str, Any] | None, json.loads(type_data))):
+        parsed: dict[str, Any] | None
+        if not (parsed := json.loads(type_data)):
             return None
         return cls(
             dpcode=dpcode,
@@ -222,13 +223,14 @@ class EnumTypeInformation(TypeInformation[str]):
         report_type: str | None,
     ) -> Self | None:
         """Load JSON string and return an EnumTypeInformation object."""
+        parsed: dict[str, Any] | None
         if not (parsed := json.loads(type_data)):
             return None
         return cls(
             dpcode=dpcode,
             type_data=type_data,
             report_type=report_type,
-            **cast(dict[str, list[str]], parsed),
+            range=parsed["range"],
         )
 
     def prepare_set_value(self, device: CustomerDevice, value: Any) -> str:
@@ -290,7 +292,8 @@ class IntegerTypeInformation(TypeInformation[float]):
         cls, dpcode: str, type_data: str, *, report_type: str | None
     ) -> Self | None:
         """Load JSON string and return an IntegerTypeInformation object."""
-        if not (parsed := cast(dict[str, Any] | None, json.loads(type_data))):
+        parsed: dict[str, Any] | None
+        if not (parsed := json.loads(type_data)):
             return None
 
         return cls(
