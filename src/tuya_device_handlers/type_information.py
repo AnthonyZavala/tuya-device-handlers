@@ -6,7 +6,7 @@ import binascii
 from dataclasses import dataclass
 import json
 import logging
-from typing import Any, ClassVar, Self, cast
+from typing import Any, ClassVar, Self
 
 from tuya_sharing import CustomerDevice
 
@@ -189,7 +189,7 @@ class BooleanTypeInformation(TypeInformation[bool]):
         if (raw_value := device.status.get(self.dpcode)) is None:
             return None
         if raw_value in (True, False):
-            return cast(bool, raw_value)
+            return raw_value
 
         if _should_log_warning(
             device.id, f"boolean_out_range|{self.dpcode}|{raw_value}"
@@ -249,7 +249,7 @@ class EnumTypeInformation(TypeInformation[str]):
             return None
         # Validate input against defined range
         if raw_value in self.range:
-            return cast(str, raw_value)
+            return raw_value
 
         if _should_log_warning(
             device.id, f"enum_out_range|{self.dpcode}|{raw_value}"
@@ -359,7 +359,7 @@ class JsonTypeInformation(TypeInformation[dict[str, Any]]):
         if (raw_value := device.status.get(self.dpcode)) is None:
             return None
         try:
-            return cast(dict[str, Any], json.loads(raw_value))
+            return json.loads(raw_value)
         except json.JSONDecodeError:
             if _should_log_warning(device.id, f"invalid_json|{self.dpcode}"):
                 _LOGGER.warning(
@@ -371,7 +371,7 @@ class JsonTypeInformation(TypeInformation[dict[str, Any]]):
                     device.product_id,
                     _LOG_OR_QUIRK,
                 )
-        return None
+            return None
 
 
 @dataclass(kw_only=True)
@@ -408,4 +408,4 @@ class StringTypeInformation(TypeInformation[str]):
 
     def read_device_value(self, device: CustomerDevice) -> str | None:
         """Read the device value for this datapoint."""
-        return cast(str, device.status.get(self.dpcode))
+        return device.status.get(self.dpcode)
