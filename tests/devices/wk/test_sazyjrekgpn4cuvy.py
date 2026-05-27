@@ -14,8 +14,11 @@ def test_quirk(
 
     wrapper = DPCodeIntegerWrapper.find_dpcode(device, "battery_percentage")
     assert wrapper is not None
-    assert wrapper.native_unit == "%"
+    assert wrapper.native_unit == ""
     assert wrapper.min_value == 0
     assert wrapper.max_value == 100
     assert wrapper.value_step == 20
     assert wrapper.read_device_status(device) == 100
+
+    device.status["battery_percentage"] = 1
+    assert wrapper.read_device_status(device) == 20

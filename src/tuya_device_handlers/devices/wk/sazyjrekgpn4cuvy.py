@@ -7,11 +7,10 @@ as 5 %. See https://github.com/home-assistant/core/issues/171131.
 
 from tuya_device_handlers import TUYA_QUIRKS_REGISTRY
 from tuya_device_handlers.builder import DeviceQuirk
-from tuya_device_handlers.const import DPMode
 from tuya_device_handlers.type_information import IntegerTypeInformation
 
 
-class BatteryPercentage0To5TypeInformation(IntegerTypeInformation):
+class _BatteryPercentage0To5TypeInformation(IntegerTypeInformation):
     """Battery percentage reported on a 0-5 raw scale.
 
     The device reports ``battery_percentage`` between 0 and 5, where 5
@@ -27,16 +26,10 @@ class BatteryPercentage0To5TypeInformation(IntegerTypeInformation):
 (
     DeviceQuirk()
     .applies_to(product_id="sazyjrekgpn4cuvy")
-    .add_dpid_integer(
+    .override_dpid_type_information_cls(
         dpid=35,
         dpcode="battery_percentage",
-        dpmode=DPMode.READ,
-        unit="%",
-        min=0,
-        max=5,
-        scale=0,
-        step=1,
-        type_information_cls=BatteryPercentage0To5TypeInformation,
+        type_information_cls=_BatteryPercentage0To5TypeInformation,
     )
     .register(TUYA_QUIRKS_REGISTRY)
 )
