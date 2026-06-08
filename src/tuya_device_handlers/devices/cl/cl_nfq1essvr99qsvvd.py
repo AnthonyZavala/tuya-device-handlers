@@ -61,11 +61,6 @@ class _InvertedIntegerTypeInformationEx(IntegerTypeInformation):
     DeviceQuirk()
     .applies_to(product_id="nfq1essvr99qsvvd")
     .override_dpid_type_information_cls(
-        dpid=2,
-        dpcode="percent_control",
-        type_information_cls=IntegerTypeInformation,
-    )
-    .override_dpid_type_information_cls(
         dpid=3,
         dpcode="percent_state",
         type_information_cls=_InvertedIntegerTypeInformationEx,
