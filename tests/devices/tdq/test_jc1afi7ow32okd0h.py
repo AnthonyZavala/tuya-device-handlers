@@ -4,12 +4,6 @@ from tests import create_device
 from tests.integration_helpers.sensor import get_sensor_default_definitions
 from tuya_device_handlers.registry import QuirksRegistry
 
-_READ_DPCODES = (
-    "temp_current",
-    "humidity_value",
-    "battery_state",
-)
-
 
 def test_quirk_overrides(
     filled_quirks_registry: QuirksRegistry,
