@@ -9,11 +9,19 @@ See https://github.com/home-assistant/core/issues/159800.
 
 from unittest.mock import patch
 
+import pytest
+
 from tests import create_device
 from tests.integration_helpers.cover import get_cover_default_definitions
 from tuya_device_handlers import TUYA_QUIRKS_REGISTRY
+from tuya_device_handlers.device_wrapper.common import (
+    DPCodeTypeInformationWrapper,
+)
 from tuya_device_handlers.registry import QuirksRegistry
-from tuya_device_handlers.type_information import IntegerTypeInformation
+from tuya_device_handlers.type_information import (
+    PrepareSetValueError,
+    TypeInformation,
+)
 
 
 def test_quirk_corrects_position(
@@ -66,16 +74,24 @@ def test_quirk_keeps_control_write_native(
     ]
 
 
-def test_quirk_read_handles_missing_value(
+def test_quirk_current_position_invalid(
     filled_quirks_registry: QuirksRegistry,
 ) -> None:
-    """Read returns None (not inverted) when the device reports no value."""
+    """Write delegates non-numeric values to the parent for validation."""
     device = create_device("cl_nfq1essvr99qsvvd.json")
     filled_quirks_registry.initialise_device_quirk(device)
-    del device.status["percent_state"]
 
-    type_information = IntegerTypeInformation.find_dpcode(
-        device, "percent_state"
-    )
-    assert type_information is not None
-    assert type_information.read_device_value(device) is None
+    definitions = get_cover_default_definitions(device)
+    wrapper = definitions["control"].current_position_wrapper
+    assert wrapper is not None
+    assert isinstance(wrapper, DPCodeTypeInformationWrapper)
+    assert wrapper.type_information is not None
+    assert isinstance(wrapper.type_information, TypeInformation)
+    # Valid numeric value is prepared correctly
+    assert wrapper.type_information.prepare_set_value(device, 70) == 30
+    # Invalid non-numeric value raises an error
+    with pytest.raises(PrepareSetValueError):
+        wrapper.type_information.prepare_set_value(device, "stop")
+    # Invalid status returns None
+    del device.status["percent_state"]
+    assert wrapper.type_information.read_device_value(device) is None
