@@ -16,10 +16,12 @@ def test_quirk_overrides(
 
     filled_quirks_registry.initialise_device_quirk(device)
 
+    assert device.category == "wsdcg"
     assert set(device.status_range) == {
         "temp_current",
         "humidity_value",
         "battery_state",
+        "ext_temp",
     }
     assert device.function == {}
 
@@ -39,4 +41,5 @@ def test_default_definitions(
         "temp_current",
         "humidity_value",
         "battery_state",
+        "ext_temp",
     }

@@ -13,6 +13,7 @@ from tuya_device_handlers.const import DPMode
 (
     DeviceQuirk()
     .applies_to(product_id="jc1afi7ow32okd0h")
+    .override_category("wsdcg")
     .add_dpid_integer(
         dpid=101,
         dpcode="temp_current",
@@ -38,6 +39,16 @@ from tuya_device_handlers.const import DPMode
         dpcode="battery_state",
         dpmode=DPMode.READ,
         enum_range=["low", "middle", "high"],
+    )
+    .add_dpid_integer(
+        dpid=106,
+        dpcode="ext_temp",
+        dpmode=DPMode.READ,
+        unit="℃",
+        min=-200,
+        max=600,
+        scale=1,
+        step=1,
     )
     .register(TUYA_QUIRKS_REGISTRY)
 )
