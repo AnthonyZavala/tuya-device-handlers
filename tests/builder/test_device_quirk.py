@@ -13,6 +13,7 @@ from tuya_sharing import (
 
 from tuya_device_handlers.builder.device_quirk import (
     DatapointDefinition,
+    DatapointRemoval,
     DeviceQuirk,
     LocalConvertStrategy,
 )
@@ -102,8 +103,8 @@ def test_add_dpid_bitmap() -> None:
     quirk = DeviceQuirk().add_dpid_bitmap(
         dpid=1, dpcode="bm", dpmode=DPMode.READ, label_range=["a", "b"]
     )
-    definition = quirk._datapoint_definitions[(1, "bm")]
-    assert definition is not None
+    definition = quirk._datapoint_definitions[0]
+    assert isinstance(definition, DatapointDefinition)
     assert definition.dptype is DPType.BITMAP
     assert json.loads(definition.values or "")["label"] == ["a", "b"]
 
@@ -113,8 +114,8 @@ def test_add_dpid_boolean() -> None:
     quirk = DeviceQuirk().add_dpid_boolean(
         dpid=2, dpcode="bo", dpmode=DPMode.WRITE
     )
-    definition = quirk._datapoint_definitions[(2, "bo")]
-    assert definition is not None
+    definition = quirk._datapoint_definitions[0]
+    assert isinstance(definition, DatapointDefinition)
     assert definition.dptype is DPType.BOOLEAN
 
 
@@ -123,8 +124,8 @@ def test_add_dpid_enum() -> None:
     quirk = DeviceQuirk().add_dpid_enum(
         dpid=3, dpcode="en", dpmode=DPMode.READ, enum_range=["scene", "auto"]
     )
-    definition = quirk._datapoint_definitions[(3, "en")]
-    assert definition is not None
+    definition = quirk._datapoint_definitions[0]
+    assert isinstance(definition, DatapointDefinition)
     assert definition.dptype is DPType.ENUM
     assert json.loads(definition.values or "")["range"] == ["scene", "auto"]
 
@@ -142,8 +143,8 @@ def test_add_dpid_integer() -> None:
         step=1,
         report_type="sum",
     )
-    definition = quirk._datapoint_definitions[(4, "i")]
-    assert definition is not None
+    definition = quirk._datapoint_definitions[0]
+    assert isinstance(definition, DatapointDefinition)
     assert definition.dptype is DPType.INTEGER
     assert definition.report_type == "sum"
     payload = json.loads(definition.values or "")
@@ -151,9 +152,12 @@ def test_add_dpid_integer() -> None:
 
 
 def test_remove_dpid() -> None:
-    """remove_dpid stores None to mark the dpid for removal."""
+    """remove_dpid stores a removal entry for the dpid."""
     quirk = DeviceQuirk().remove_dpid(dpid=5, dpcode="rm")
-    assert quirk._datapoint_definitions[(5, "rm")] is None
+    entry = quirk._datapoint_definitions[0]
+    assert isinstance(entry, DatapointRemoval)
+    assert entry.dpid == 5
+    assert entry.dpcode == "rm"
 
 
 def test_override_category() -> None:
@@ -332,7 +336,7 @@ def test_mqtt_enum_strategy_mapping(
     assert mock_device.status["x"] is False
 
 
-def test_initialise_device_none_definition_removes_everything(
+def test_initialise_device_remove_dpid_removes_everything(
     mock_device: CustomerDevice,
 ) -> None:
     """remove_dpid: function, strategy, status all popped."""
@@ -351,6 +355,101 @@ def test_initialise_device_none_definition_removes_everything(
     assert 7 not in mock_device.local_strategy
     assert "g" not in mock_device.status
     assert "g" not in mock_device.status_range
+
+
+def test_initialise_device_apply_when_met(
+    mock_device: CustomerDevice,
+) -> None:
+    """A definition whose apply_when returns True is applied."""
+    mock_device.support_local = True
+    mock_device.local_strategy = {}
+    quirk = DeviceQuirk().add_dpid_boolean(
+        dpid=1,
+        dpcode="x",
+        dpmode=DPMode.READ | DPMode.WRITE,
+        apply_when=lambda device: device.status.get("demo_boolean") is True,
+    )
+    quirk.initialise_device(mock_device)
+    assert "x" in mock_device.status_range
+    assert "x" in mock_device.function
+    assert 1 in mock_device.local_strategy
+
+
+def test_initialise_device_apply_when_not_met(
+    mock_device: CustomerDevice,
+) -> None:
+    """A definition whose apply_when returns False is skipped."""
+    mock_device.support_local = True
+    mock_device.local_strategy = {}
+    quirk = DeviceQuirk().add_dpid_boolean(
+        dpid=1,
+        dpcode="x",
+        dpmode=DPMode.READ | DPMode.WRITE,
+        apply_when=lambda device: device.status.get("demo_boolean") is False,
+    )
+    quirk.initialise_device(mock_device)
+    assert "x" not in mock_device.status_range
+    assert "x" not in mock_device.function
+    assert 1 not in mock_device.local_strategy
+
+
+def test_initialise_device_remove_dpid_apply_when_not_met(
+    mock_device: CustomerDevice,
+) -> None:
+    """A removal whose apply_when returns False is skipped."""
+    mock_device.support_local = True
+    mock_device.local_strategy = {7: {"some": "thing"}}
+    mock_device.function["g"] = DeviceFunction(
+        code="g", type="Boolean", values="{}"
+    )
+    mock_device.status["g"] = True
+    mock_device.status_range["g"] = DeviceStatusRange(
+        code="g", type="Boolean", values="{}"
+    )
+    quirk = DeviceQuirk().remove_dpid(
+        dpid=7, dpcode="g", apply_when=lambda _device: False
+    )
+    quirk.initialise_device(mock_device)
+    assert "g" in mock_device.function
+    assert 7 in mock_device.local_strategy
+    assert "g" in mock_device.status
+    assert "g" in mock_device.status_range
+
+
+def test_initialise_device_apply_when_variants(
+    mock_device: CustomerDevice,
+) -> None:
+    """Two conditional definitions can target the same datapoint."""
+    mock_device.support_local = True
+    mock_device.local_strategy = {}
+    quirk = (
+        DeviceQuirk()
+        .add_dpid_integer(
+            dpid=1,
+            dpcode="x",
+            dpmode=DPMode.READ,
+            unit="℃",
+            min=0,
+            max=100,
+            scale=0,
+            step=1,
+            apply_when=lambda device: device.status.get("demo_integer") == 123,
+        )
+        .add_dpid_integer(
+            dpid=1,
+            dpcode="x",
+            dpmode=DPMode.READ,
+            unit="℉",
+            min=0,
+            max=100,
+            scale=0,
+            step=1,
+            apply_when=lambda device: device.status.get("demo_integer") != 123,
+        )
+    )
+    quirk.initialise_device(mock_device)
+    values = mock_device.status_range["x"].values
+    assert json.loads(values or "")["unit"] == "℃"
 
 
 def test_initialise_device_override_category(
