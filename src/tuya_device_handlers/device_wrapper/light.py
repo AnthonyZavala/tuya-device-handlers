@@ -8,7 +8,7 @@ from tuya_sharing import CustomerDevice
 from tuya_device_handlers.type_information import IntegerTypeInformation
 from tuya_device_handlers.utils import RemapHelper
 
-from .common import DPCodeIntegerWrapper, DPCodeJsonWrapper
+from .common import DPCodeIntegerWrapper, DPCodeJsonWrapper, DPCodeStringWrapper
 
 
 class BrightnessWrapper(DPCodeIntegerWrapper[int]):
@@ -236,4 +236,49 @@ class ColorDataWrapper(DPCodeJsonWrapper[tuple[float, float, float]]):
                 "s": round(self.s_type.remap_value_from(saturation)),
                 "v": round(self.v_type.remap_value_from(brightness)),
             }
+        )
+
+
+class ColorDataStringWrapper(DPCodeStringWrapper[tuple[float, float, float]]):
+    """Wrapper for a hex-encoded color data DP code.
+
+    Some devices report ``colour_data`` (or ``colour_data_v2``) as a
+    ``String`` datapoint whose value packs the hue, saturation and value as
+    three consecutive 4-digit hexadecimal numbers (``HHHHSSSSVVVV``), instead
+    of the JSON object handled by ``ColorDataWrapper``.
+    """
+
+    h_type = DEFAULT_H_TYPE
+    s_type = DEFAULT_S_TYPE
+    v_type = DEFAULT_V_TYPE
+
+    def read_device_status(
+        self, device: CustomerDevice
+    ) -> tuple[float, float, float] | None:
+        """Return a tuple (H, S, V) from this color data."""
+        status = self._read_dpcode_value(device)
+        # Expect exactly "HHHHSSSSVVVV"; reject other types or lengths.
+        if not isinstance(status, str) or len(status) != 12:
+            return None
+        try:
+            hue = int(status[0:4], 16)
+            saturation = int(status[4:8], 16)
+            value = int(status[8:12], 16)
+        except ValueError:
+            return None
+        return (
+            self.h_type.remap_value_to(hue),
+            self.s_type.remap_value_to(saturation),
+            self.v_type.remap_value_to(value),
+        )
+
+    def _convert_value_to_raw_value(
+        self, device: CustomerDevice, value: tuple[float, float, float]
+    ) -> Any:
+        """Convert HA tuple (H, S, V) to a raw device value."""
+        hue, saturation, brightness = value
+        return (
+            f"{round(self.h_type.remap_value_from(hue)):04x}"
+            f"{round(self.s_type.remap_value_from(saturation)):04x}"
+            f"{round(self.v_type.remap_value_from(brightness)):04x}"
         )

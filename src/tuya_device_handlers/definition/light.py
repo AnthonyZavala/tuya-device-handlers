@@ -19,6 +19,7 @@ from tuya_device_handlers.device_wrapper.light import (
     DEFAULT_S_TYPE_V2,
     DEFAULT_V_TYPE_V2,
     BrightnessWrapper,
+    ColorDataStringWrapper,
     ColorDataWrapper,
     ColorTempWrapper,
 )
@@ -140,31 +141,40 @@ def _get_color_data_wrapper(
     *,
     color_data_dpcode: str | tuple[str, ...] | None,
     fallback_color_data_mode: FallbackColorDataMode,
-) -> ColorDataWrapper | None:
-    if (
-        color_data_wrapper := ColorDataWrapper.find_dpcode(
+) -> ColorDataWrapper | ColorDataStringWrapper | None:
+    color_data_wrapper: ColorDataWrapper | ColorDataStringWrapper | None
+    if color_data_wrapper := ColorDataWrapper.find_dpcode(
+        device, color_data_dpcode, prefer_function=True
+    ):
+        # JSON colour_data may describe its own h/s/v ranges
+        if function_data := json.loads(
+            color_data_wrapper.type_information.type_data
+        ):
+            h_type = function_data.get("h", {"min": 0, "max": 360})
+            s_type = function_data.get("s", {"min": 0, "max": 255})
+            v_type = function_data.get("v", {"min": 0, "max": 255})
+            color_data_wrapper.h_type = RemapHelper.from_function_data(
+                cast(dict[str, Any], h_type), 0, 360
+            )
+            color_data_wrapper.s_type = RemapHelper.from_function_data(
+                cast(dict[str, Any], s_type), 0, 100
+            )
+            color_data_wrapper.v_type = RemapHelper.from_function_data(
+                cast(dict[str, Any], v_type), 0, 255
+            )
+            return color_data_wrapper
+    elif not (
+        color_data_wrapper := ColorDataStringWrapper.find_dpcode(
             device, color_data_dpcode, prefer_function=True
         )
-    ) is None:
+    ):
+        # Neither a JSON nor a hex-encoded colour_data datapoint
         return None
 
-    # Fetch color data type information
-    if function_data := json.loads(
-        color_data_wrapper.type_information.type_data
-    ):
-        h_type = function_data.get("h", {"min": 0, "max": 360})
-        s_type = function_data.get("s", {"min": 0, "max": 255})
-        v_type = function_data.get("v", {"min": 0, "max": 255})
-        color_data_wrapper.h_type = RemapHelper.from_function_data(
-            cast(dict[str, Any], h_type), 0, 360
-        )
-        color_data_wrapper.s_type = RemapHelper.from_function_data(
-            cast(dict[str, Any], s_type), 0, 100
-        )
-        color_data_wrapper.v_type = RemapHelper.from_function_data(
-            cast(dict[str, Any], v_type), 0, 255
-        )
-    elif (
+    # Hex-encoded colour_data, or JSON colour_data without explicit ranges:
+    # fall back to the V1 (default) or V2 remap ranges. Hex String DPs carry
+    # no range info, so V2 selection relies on the checks below.
+    if (
         fallback_color_data_mode == FallbackColorDataMode.V2
         or color_data_wrapper.dpcode == "colour_data_v2"
         or (brightness_wrapper and brightness_wrapper.max_value > 255)
