@@ -10,6 +10,12 @@ from tuya_device_handlers.device_wrapper.common import (
     DPCodeEnumWrapper,
 )
 from tuya_device_handlers.device_wrapper.light import (
+    DEFAULT_H_TYPE,
+    DEFAULT_H_TYPE_V2,
+    DEFAULT_S_TYPE,
+    DEFAULT_S_TYPE_V2,
+    DEFAULT_V_TYPE,
+    DEFAULT_V_TYPE_V2,
     BrightnessWrapper,
     ColorDataJsonWrapper,
     ColorDataStringWrapper,
@@ -127,3 +133,49 @@ def test_get_default_definition_without_colour_data() -> None:
         )
     )
     assert definition.color_data_wrapper is None
+
+
+def test_json_colour_data_without_ranges() -> None:
+    """Test JSON colour_data without ranges falls back to the V1 ranges."""
+    device = create_device("bzyd_45idzfufidgee7ir.json")
+    assert (
+        definition := get_default_definition(
+            device,
+            switch_dpcode="switch_led",
+            brightness_dpcode=None,
+            brightness_max_dpcode=None,
+            brightness_min_dpcode=None,
+            color_data_dpcode="colour_data",
+            color_mode_dpcode="work_mode",
+            color_temp_dpcode=None,
+            fallback_color_data_mode=FallbackColorDataMode.V1,
+        )
+    )
+    assert isinstance(definition.color_data_wrapper, ColorDataJsonWrapper)
+    # Empty type data and no brightness DP: keep the V1 (default) ranges
+    assert definition.color_data_wrapper.h_type is DEFAULT_H_TYPE
+    assert definition.color_data_wrapper.s_type is DEFAULT_S_TYPE
+    assert definition.color_data_wrapper.v_type is DEFAULT_V_TYPE
+
+
+def test_json_colour_data_without_ranges_v2() -> None:
+    """Test JSON colour_data without ranges honours a >255 brightness."""
+    device = create_device("gyd_lgekqfxdabipm3tn.json")
+    assert (
+        definition := get_default_definition(
+            device,
+            switch_dpcode="switch_led",
+            brightness_dpcode="bright_value",
+            brightness_max_dpcode=None,
+            brightness_min_dpcode=None,
+            color_data_dpcode="colour_data",
+            color_mode_dpcode="work_mode",
+            color_temp_dpcode="temp_value",
+            fallback_color_data_mode=FallbackColorDataMode.V1,
+        )
+    )
+    assert isinstance(definition.color_data_wrapper, ColorDataJsonWrapper)
+    # Empty type data, but a brightness max above 255 selects the V2 ranges
+    assert definition.color_data_wrapper.h_type is DEFAULT_H_TYPE_V2
+    assert definition.color_data_wrapper.s_type is DEFAULT_S_TYPE_V2
+    assert definition.color_data_wrapper.v_type is DEFAULT_V_TYPE_V2
