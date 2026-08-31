@@ -117,7 +117,7 @@ def test_get_default_definition_hex_string_colour_data() -> None:
 
 
 def test_get_default_definition_without_colour_data() -> None:
-    """Test a device without any colour_data has no color_data_wrapper."""
+    """Test an unmatched colour_data dpcode has no color_data_wrapper."""
     device = create_device("dj_mki13ie507rlry4r.json")
     assert (
         definition := get_default_definition(
@@ -176,6 +176,28 @@ def test_json_colour_data_without_ranges_v2() -> None:
     )
     assert isinstance(definition.color_data_wrapper, ColorDataJsonWrapper)
     # Empty type data, but a brightness max above 255 selects the V2 ranges
+    assert definition.color_data_wrapper.h_type is DEFAULT_H_TYPE_V2
+    assert definition.color_data_wrapper.s_type is DEFAULT_S_TYPE_V2
+    assert definition.color_data_wrapper.v_type is DEFAULT_V_TYPE_V2
+
+
+def test_json_colour_data_without_ranges_fallback_v2() -> None:
+    """Test JSON colour_data without ranges honours the V2 fallback mode."""
+    device = create_device("bzyd_45idzfufidgee7ir.json")
+    assert (
+        definition := get_default_definition(
+            device,
+            switch_dpcode="switch_led",
+            brightness_dpcode=None,
+            brightness_max_dpcode=None,
+            brightness_min_dpcode=None,
+            color_data_dpcode="colour_data",
+            color_mode_dpcode="work_mode",
+            color_temp_dpcode=None,
+            fallback_color_data_mode=FallbackColorDataMode.V2,
+        )
+    )
+    assert isinstance(definition.color_data_wrapper, ColorDataJsonWrapper)
     assert definition.color_data_wrapper.h_type is DEFAULT_H_TYPE_V2
     assert definition.color_data_wrapper.s_type is DEFAULT_S_TYPE_V2
     assert definition.color_data_wrapper.v_type is DEFAULT_V_TYPE_V2

@@ -370,17 +370,39 @@ def test_color_data_string_read_device_status(
     assert wrapper
     assert wrapper.read_device_status(mock_device) == expected_device_status
 
-    # Non-hexadecimal (but correctly sized) values return None
-    mock_device.status["colour_data"] = "zzzzzzzzzzzz"
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        # Non-hexadecimal, but correctly sized
+        "zzzzzzzzzzzz",
+        # Wrongly sized
+        "0078",
+        "",
+        # Not a string at all
+        None,
+        123456,
+    ],
+)
+def test_color_data_string_invalid_status(
+    status: Any,
+    mock_device: CustomerDevice,
+) -> None:
+    """Test unusable hex-encoded String colour_data values return None."""
+    _inject_hex_string_light(mock_device)
+    wrapper = ColorDataStringWrapper.find_dpcode(mock_device, "colour_data")
+
+    assert wrapper
+    mock_device.status["colour_data"] = status
     assert wrapper.read_device_status(mock_device) is None
 
-    # Wrongly-sized values return None
-    mock_device.status["colour_data"] = "0078"
-    assert wrapper.read_device_status(mock_device) is None
 
-    # None and missing status return None
-    mock_device.status["colour_data"] = None
-    assert wrapper.read_device_status(mock_device) is None
+def test_color_data_string_missing_status(mock_device: CustomerDevice) -> None:
+    """Test a missing hex-encoded String colour_data returns None."""
+    _inject_hex_string_light(mock_device)
+    wrapper = ColorDataStringWrapper.find_dpcode(mock_device, "colour_data")
+
+    assert wrapper
     mock_device.status.pop("colour_data")
     assert wrapper.read_device_status(mock_device) is None
 
