@@ -11,8 +11,8 @@ from tuya_device_handlers.device_wrapper.common import (
 )
 from tuya_device_handlers.device_wrapper.light import (
     BrightnessWrapper,
+    ColorDataJsonWrapper,
     ColorDataStringWrapper,
-    ColorDataWrapper,
     ColorTempWrapper,
 )
 
@@ -34,7 +34,7 @@ def test_get_default_definition() -> None:
         )
     )
     assert isinstance(definition.brightness_wrapper, BrightnessWrapper)
-    assert isinstance(definition.color_data_wrapper, ColorDataWrapper)
+    assert isinstance(definition.color_data_wrapper, ColorDataJsonWrapper)
     assert isinstance(definition.color_mode_wrapper, DPCodeEnumWrapper)
     assert not definition.color_temp_wrapper
     assert isinstance(definition.switch_wrapper, DPCodeBooleanWrapper)
@@ -73,7 +73,7 @@ def test_missing_colour_data_hsv() -> None:
         )
     )
     assert definition.brightness_wrapper is None
-    assert isinstance(definition.color_data_wrapper, ColorDataWrapper)
+    assert isinstance(definition.color_data_wrapper, ColorDataJsonWrapper)
     assert definition.color_mode_wrapper is None
     assert definition.color_temp_wrapper is None
     assert isinstance(definition.switch_wrapper, DPCodeBooleanWrapper)

@@ -8,7 +8,12 @@ from tuya_sharing import CustomerDevice
 from tuya_device_handlers.type_information import IntegerTypeInformation
 from tuya_device_handlers.utils import RemapHelper
 
-from .common import DPCodeIntegerWrapper, DPCodeJsonWrapper, DPCodeStringWrapper
+from .common import (
+    DPCodeIntegerWrapper,
+    DPCodeJsonWrapper,
+    DPCodeStringWrapper,
+    DPCodeWrapper,
+)
 
 
 class BrightnessWrapper(DPCodeIntegerWrapper[int]):
@@ -206,12 +211,23 @@ DEFAULT_V_TYPE_V2 = RemapHelper(
 )
 
 
-class ColorDataWrapper(DPCodeJsonWrapper[tuple[float, float, float]]):
-    """Wrapper for color data DP code."""
+class ColorDataWrapper(DPCodeWrapper[tuple[float, float, float]]):
+    """Base for colour_data wrappers, holding the H/S/V remap ranges.
+
+    The ranges are set by the light definition once the encoding (V1 or
+    V2) is known, so every colour_data wrapper exposes them regardless of
+    how the datapoint itself is encoded.
+    """
 
     h_type = DEFAULT_H_TYPE
     s_type = DEFAULT_S_TYPE
     v_type = DEFAULT_V_TYPE
+
+
+class ColorDataJsonWrapper(
+    ColorDataWrapper, DPCodeJsonWrapper[tuple[float, float, float]]
+):
+    """Wrapper for a JSON-encoded color data DP code."""
 
     def read_device_status(
         self, device: CustomerDevice
@@ -239,18 +255,16 @@ class ColorDataWrapper(DPCodeJsonWrapper[tuple[float, float, float]]):
         )
 
 
-class ColorDataStringWrapper(DPCodeStringWrapper[tuple[float, float, float]]):
+class ColorDataStringWrapper(
+    ColorDataWrapper, DPCodeStringWrapper[tuple[float, float, float]]
+):
     """Wrapper for a hex-encoded color data DP code.
 
     Some devices report ``colour_data`` (or ``colour_data_v2``) as a
     ``String`` datapoint whose value packs the hue, saturation and value as
     three consecutive 4-digit hexadecimal numbers (``HHHHSSSSVVVV``), instead
-    of the JSON object handled by ``ColorDataWrapper``.
+    of the JSON object handled by ``ColorDataJsonWrapper``.
     """
-
-    h_type = DEFAULT_H_TYPE
-    s_type = DEFAULT_S_TYPE
-    v_type = DEFAULT_V_TYPE
 
     def read_device_status(
         self, device: CustomerDevice

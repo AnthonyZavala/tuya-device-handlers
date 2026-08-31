@@ -19,6 +19,7 @@ from tuya_device_handlers.device_wrapper.light import (
     DEFAULT_S_TYPE_V2,
     DEFAULT_V_TYPE_V2,
     BrightnessWrapper,
+    ColorDataJsonWrapper,
     ColorDataStringWrapper,
     ColorDataWrapper,
     ColorTempWrapper,
@@ -141,39 +142,92 @@ def _get_color_data_wrapper(
     *,
     color_data_dpcode: str | tuple[str, ...] | None,
     fallback_color_data_mode: FallbackColorDataMode,
-) -> ColorDataWrapper | ColorDataStringWrapper | None:
-    color_data_wrapper: ColorDataWrapper | ColorDataStringWrapper | None
-    if color_data_wrapper := ColorDataWrapper.find_dpcode(
-        device, color_data_dpcode, prefer_function=True
+) -> ColorDataWrapper | None:
+    if json_wrapper := _get_color_data_json_wrapper(
+        device,
+        brightness_wrapper,
+        color_data_dpcode=color_data_dpcode,
+        fallback_color_data_mode=fallback_color_data_mode,
     ):
-        # JSON colour_data may describe its own h/s/v ranges
-        if function_data := json.loads(
-            color_data_wrapper.type_information.type_data
-        ):
-            h_type = function_data.get("h", {"min": 0, "max": 360})
-            s_type = function_data.get("s", {"min": 0, "max": 255})
-            v_type = function_data.get("v", {"min": 0, "max": 255})
-            color_data_wrapper.h_type = RemapHelper.from_function_data(
-                cast(dict[str, Any], h_type), 0, 360
-            )
-            color_data_wrapper.s_type = RemapHelper.from_function_data(
-                cast(dict[str, Any], s_type), 0, 100
-            )
-            color_data_wrapper.v_type = RemapHelper.from_function_data(
-                cast(dict[str, Any], v_type), 0, 255
-            )
-            return color_data_wrapper
-    elif not (
+        return json_wrapper
+    if string_wrapper := _get_color_data_string_wrapper(
+        device,
+        brightness_wrapper,
+        color_data_dpcode=color_data_dpcode,
+        fallback_color_data_mode=fallback_color_data_mode,
+    ):
+        return string_wrapper
+    return None
+
+
+def _get_color_data_json_wrapper(
+    device: CustomerDevice,
+    brightness_wrapper: BrightnessWrapper | None,
+    *,
+    color_data_dpcode: str | tuple[str, ...] | None,
+    fallback_color_data_mode: FallbackColorDataMode,
+) -> ColorDataJsonWrapper | None:
+    if not (
+        color_data_wrapper := ColorDataJsonWrapper.find_dpcode(
+            device, color_data_dpcode, prefer_function=True
+        )
+    ):
+        return None
+    # JSON colour_data may describe its own h/s/v ranges
+    if function_data := json.loads(
+        color_data_wrapper.type_information.type_data
+    ):
+        h_type = function_data.get("h", {"min": 0, "max": 360})
+        s_type = function_data.get("s", {"min": 0, "max": 255})
+        v_type = function_data.get("v", {"min": 0, "max": 255})
+        color_data_wrapper.h_type = RemapHelper.from_function_data(
+            cast(dict[str, Any], h_type), 0, 360
+        )
+        color_data_wrapper.s_type = RemapHelper.from_function_data(
+            cast(dict[str, Any], s_type), 0, 100
+        )
+        color_data_wrapper.v_type = RemapHelper.from_function_data(
+            cast(dict[str, Any], v_type), 0, 255
+        )
+        return color_data_wrapper
+    # JSON colour_data without explicit ranges
+    _apply_fallback_ranges(
+        color_data_wrapper,
+        brightness_wrapper,
+        fallback_color_data_mode=fallback_color_data_mode,
+    )
+    return color_data_wrapper
+
+
+def _get_color_data_string_wrapper(
+    device: CustomerDevice,
+    brightness_wrapper: BrightnessWrapper | None,
+    *,
+    color_data_dpcode: str | tuple[str, ...] | None,
+    fallback_color_data_mode: FallbackColorDataMode,
+) -> ColorDataStringWrapper | None:
+    if not (
         color_data_wrapper := ColorDataStringWrapper.find_dpcode(
             device, color_data_dpcode, prefer_function=True
         )
     ):
-        # Neither a JSON nor a hex-encoded colour_data datapoint
         return None
+    # Hex String DPs carry no range information at all
+    _apply_fallback_ranges(
+        color_data_wrapper,
+        brightness_wrapper,
+        fallback_color_data_mode=fallback_color_data_mode,
+    )
+    return color_data_wrapper
 
-    # Hex-encoded colour_data, or JSON colour_data without explicit ranges:
-    # fall back to the V1 (default) or V2 remap ranges. Hex String DPs carry
-    # no range info, so V2 selection relies on the checks below.
+
+def _apply_fallback_ranges(
+    color_data_wrapper: ColorDataWrapper,
+    brightness_wrapper: BrightnessWrapper | None,
+    *,
+    fallback_color_data_mode: FallbackColorDataMode,
+) -> None:
+    """Apply the V1 (default) or V2 remap ranges to a colour_data wrapper."""
     if (
         fallback_color_data_mode == FallbackColorDataMode.V2
         or color_data_wrapper.dpcode == "colour_data_v2"
@@ -182,5 +236,3 @@ def _get_color_data_wrapper(
         color_data_wrapper.h_type = DEFAULT_H_TYPE_V2
         color_data_wrapper.s_type = DEFAULT_S_TYPE_V2
         color_data_wrapper.v_type = DEFAULT_V_TYPE_V2
-
-    return color_data_wrapper

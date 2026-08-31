@@ -11,8 +11,8 @@ from tuya_device_handlers.device_wrapper.common import (
 )
 from tuya_device_handlers.device_wrapper.light import (
     BrightnessWrapper,
+    ColorDataJsonWrapper,
     ColorDataStringWrapper,
-    ColorDataWrapper,
     ColorTempWrapper,
 )
 from tuya_device_handlers.utils import RemapHelper
@@ -82,7 +82,7 @@ def _inject_default_light(mock_device: CustomerDevice) -> None:
         ),
         (
             "default",
-            ColorDataWrapper,
+            ColorDataJsonWrapper,
             "colour_data",
             {},
             (228.6350974930362, 393.3070866141732, 1002.9330708661417),
@@ -215,7 +215,7 @@ def test_read_device_status(
         ),
         (
             "default",
-            ColorDataWrapper,
+            ColorDataJsonWrapper,
             "colour_data",
             (228.6350974930362, 393.3070866141732, 1002.9330708661417),
             [
